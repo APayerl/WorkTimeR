@@ -16,7 +16,6 @@ import java.util.stream.Stream
 
 
 fun main() {
-    println("Hello world!")
 
     val worktimerPath = File("${System.getProperty("user.home")}/.worktimer")
     if(!worktimerPath.exists()) println("Created directory: ${worktimerPath.mkdir()}")
@@ -62,10 +61,7 @@ fun main() {
 //    mapper.writeValue(worktimerYamlConfig, config2)
 
     val config: Config = mapper.readValue(worktimerYamlConfig, Config::class.java)
-    println(config)
-
     val weekNumber = java.time.LocalDate.now().get(WeekFields.ISO.weekOfYear())
-
     val weekSchedule = config.special.find {
         (weekNumber == it.validBetweenWeeks[0]) || ((weekNumber >= it.validBetweenWeeks[0]) && (weekNumber <= it.validBetweenWeeks[1]))
     } ?: config.default
