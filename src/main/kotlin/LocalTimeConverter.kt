@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import kotlinx.datetime.LocalTime
 
-
 object LocalTimeConverter {
     class Serializer(t: Class<LocalTime?>?): StdSerializer<LocalTime?>(t) {
         override fun serialize(value: LocalTime?, gen: JsonGenerator?, provider: SerializerProvider?) {
@@ -24,7 +23,7 @@ object LocalTimeConverter {
 
     class Deserializer(vc: Class<*>? = null): StdDeserializer<LocalTime?>(vc) {
         override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): LocalTime? {
-            val node = p!!.codec.readTree<JsonNode>(p)
+            val node = p?.codec?.readTree<JsonNode>(p)!!
 
             return LocalTime(node["hour"].asInt(), node["minute"].asInt(), node["second"].asInt(), node["nanos"].asInt())
         }
