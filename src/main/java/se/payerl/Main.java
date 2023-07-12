@@ -5,10 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+
 import java.io.File;
 import java.io.IOException;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.WeekFields;
 import java.util.Comparator;
 import java.util.List;
@@ -16,89 +17,64 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonFactory;
-
 public class Main {
     public static void main(String[] args) throws IOException {
-        File worktimerPath = new File(System.getProperty("user.home") + File.separator + ".worktimer");
-        if (!worktimerPath.exists()) System.out.println("Created directory: " + worktimerPath.mkdir());
-
-        File worktimerConfig = new File(worktimerPath.getAbsolutePath() + File.separator + "config.yaml");
-
-        if (!worktimerConfig.exists()) System.out.println("Created config: " + worktimerConfig.createNewFile());
-
-        JsonFactory factory = new YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
-
-        ObjectMapper mapper = new ObjectMapper(factory)
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER))
                 .findAndRegisterModules()
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .configure(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS, false)
                 .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
-//    val config2: Config = Config(
-//        WorkWeek(
-//            WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
-//            WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
-//            WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
-//            WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
-//            WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
-//            null,
-//            null
-//        ),
-//        listOf(
-//            WorkWeek(
-//                WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
-//                WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
-//                WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
-//                WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
-//                WorkDay(LocalTime.of(8, 0), LocalTime.of(15, 0)),
-//                null,
-//                null,
-//                listOf(21, 36)
-//            )
-//        )
-//    )
-//    mapper.writeValue(worktimerConfig, config2)
+        File worktimerPath = new File(System.getProperty("user.home") + File.separator + ".worktimer");
+        File worktimerConfig = new File(worktimerPath.getAbsolutePath() + File.separator + "config.yaml");
+
+        if(!worktimerPath.exists())  System.out.println("Created directory: " + worktimerPath.mkdir());
+        if(!worktimerConfig.exists()) {
+            System.out.println("Created config: " + worktimerConfig.createNewFile());
+            writeNewConfigFile(mapper, worktimerConfig);
+        }
+
 
         Config config = mapper.readValue(worktimerConfig, Config.class);
         int weekNumber = LocalDate.now().get(WeekFields.ISO.weekOfYear());
 
         List<MenuAlternative> menuItems = List.of(
-                new MenuAlternative("--today", "Prints todays day and schedule.", (i) -> {
+                new MenuAlternative("today", "Prints todays day and schedule.", (i) -> {
                     int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
                     WorkDay day = getWeek(weekNumber, config).getDays().get(dayIndex);
                     System.out.println("Todays schedule: " + (day == null ? "Off" : day.toString()));
                 }),
-                new MenuAlternative("--tomorrow", "Prints todays day and schedule.", (i) -> {
+                new MenuAlternative("tomorrow", "Prints todays day and schedule.", (i) -> {
                     int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
-                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex+1)%7);
+                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex + 1) % 7);
                     System.out.println("Tomorrows schedule: " + (day == null ? "Off" : day.toString()));
                 }),
-                new MenuAlternative("--yesterday", "Prints todays day and schedule.", (i) -> {
+                new MenuAlternative("yesterday", "Prints todays day and schedule.", (i) -> {
                     int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
-                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex-1)%7);
+                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex - 1) % 7);
                     System.out.println("Tomorrows schedule: " + (day == null ? "Off" : day.toString()));
                 }),
-                new MenuAlternative("--all", "Prints both the default schedule and the week specific ones.", (i) -> {
+                new MenuAlternative("all", "Prints both the default schedule and the week specific ones.", (i) -> {
                     System.out.println("Standard schedule:\n" + config.getDefaultWeek() + "\n\nThis weeks schedule:\n" + getWeek(weekNumber, config));
                 }),
-                new MenuAlternative("--week-n", "Prints specified weeks schedule.", (i) -> {
+                new MenuAlternative("week-n", "Prints specified weeks schedule.", (i) -> {
                     int week = Integer.parseInt(args[i.incrementAndGet()]);
                     System.out.println("Schedule week " + week + ":\n" + getWeek(week, config));
                 }),
-                new MenuAlternative("--this-week", "Prints this weeks schedule.", (i) -> {
+                new MenuAlternative("this-week", "Prints this weeks schedule.", (i) -> {
                     System.out.println("Schedule week " + weekNumber + ":\n" + getWeek(weekNumber, config));
                 }),
-                new MenuAlternative("--next-week", "Prints next weeks schedule.", (i) -> {
+                new MenuAlternative("next-week", "Prints next weeks schedule.", (i) -> {
                     System.out.println("Schedule week " + (weekNumber + 1) + ":\n" + getWeek(weekNumber + 1, config));
                 }),
-                new MenuAlternative("--last-week", "Prints last weeks schedule.", (i) -> {
+                new MenuAlternative("last-week", "Prints last weeks schedule.", (i) -> {
                     System.out.println("Schedule week " + (weekNumber - 1) + ":\n" + getWeek(weekNumber - 1, config));
                 })
         );
-        for (AtomicInteger i = new AtomicInteger(0); i.get() < args.length; i.incrementAndGet()) {
+
+        for(AtomicInteger i = new AtomicInteger(0); i.get() < args.length; i.incrementAndGet()) {
             Optional<MenuAlternative> menuItem = menuItems.stream()
-                    .filter(x -> args[i.get()].equalsIgnoreCase(x.getMenuPath()))
+                    .filter(x -> args[i.get()].equalsIgnoreCase("--" + x.getMenuPath()))
                     .findFirst();
             if(menuItem.isEmpty())
                 System.out.println(helpMessage(menuItems));
@@ -124,12 +100,40 @@ public class Main {
     public static String helpMessage(List<MenuAlternative> menuItems) {
         return """
                 No valid input registered.
-                
+                                
                 Available inputs are:\n""".concat(
-                        menuItems.stream()
-                                .sorted(Comparator.comparing(MenuAlternative::getMenuPath))
-                                .map(x -> x.getMenuPath() + " " + x.getDescription())
-                                .collect(Collectors.joining("\n"))
+                menuItems.stream()
+                        .sorted(Comparator.comparing(MenuAlternative::getMenuPath))
+                        .map(x -> "--" + x.getMenuPath() + " " + x.getDescription())
+                        .collect(Collectors.joining("\n"))
         );
+    }
+
+    public static void writeNewConfigFile(ObjectMapper om, File configFile) throws IOException {
+        Config config2 = new Config(
+                new WorkWeek(
+                        new WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
+                        new WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
+                        new WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
+                        new WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
+                        new WorkDay(LocalTime.of(8, 0), LocalTime.of(17, 0)),
+                        null,
+                        null
+                ),
+                List.of(
+                        new WorkWeek(
+                                new WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
+                                new WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
+                                new WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
+                                new WorkDay(LocalTime.of(8, 0), LocalTime.of(16, 45)),
+                                new WorkDay(LocalTime.of(8, 0), LocalTime.of(15, 0)),
+                                null,
+                                null,
+                                List.of(21, 36)
+                        ),
+                        new WorkWeek(List.of(29, 32))
+                )
+        );
+        om.writeValue(configFile, config2);
     }
 }

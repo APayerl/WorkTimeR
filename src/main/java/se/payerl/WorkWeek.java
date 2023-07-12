@@ -1,23 +1,23 @@
 package se.payerl;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import org.jetbrains.annotations.NotNull;
 
 import java.beans.ConstructorProperties;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
 @JsonPropertyOrder("validBetweenWeeks")
 public class WorkWeek{
-    private final WorkDay monday;
-    private final WorkDay tuesday;
-    private final WorkDay wednesday;
-    private final WorkDay thursday;
-    private final WorkDay friday;
-    private final WorkDay saturday;
-    private final WorkDay sunday;
-    private final List<Integer> validBetweenWeeks;
+    private WorkDay monday = null;
+    private WorkDay tuesday = null;
+    private WorkDay wednesday = null;
+    private WorkDay thursday = null;
+    private WorkDay friday = null;
+    private WorkDay saturday = null;
+    private WorkDay sunday = null;
+    private List<Integer> validBetweenWeeks;
 
     @ConstructorProperties({"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "validBetweenWeeks"})
     public WorkWeek(
@@ -57,6 +57,10 @@ public class WorkWeek{
         this.validBetweenWeeks = List.of();
     }
 
+    public WorkWeek(List<Integer> validBetweenWeeks) {
+        this.validBetweenWeeks = validBetweenWeeks;
+    }
+
     public WorkDay getMonday() {
         return monday;
     }
@@ -85,6 +89,7 @@ public class WorkWeek{
         return sunday;
     }
 
+    @JsonIgnore
     public List<WorkDay> getDays() {
         return Stream.of(monday, tuesday, wednesday, thursday, friday, saturday, sunday).toList();
     }
