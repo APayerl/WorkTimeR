@@ -10,6 +10,11 @@ import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.WeekFields;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonFactory;
 
@@ -58,45 +63,73 @@ public class Main {
         Config config = mapper.readValue(worktimerConfig, Config.class);
         int weekNumber = LocalDate.now().get(WeekFields.ISO.weekOfYear());
 
-
-        for (int i = 0; i < args.length; i++) {
-            switch (args[i].toLowerCase()) {
-                case "--today" -> {
-                    int dayIndex = LocalDate.now().getDayOfWeek().getValue();
+        List<MenuAlternative> menuItems = List.of(
+                new MenuAlternative("--today", "Prints todays day and schedule.", (i) -> {
+                    int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
                     WorkDay day = getWeek(weekNumber, config).getDays().get(dayIndex);
                     System.out.println("Todays schedule: " + (day == null ? "Off" : day.toString()));
-                }
-                case "--all" -> System.out.println("Standard schedule:\n" + config.getDefaultWeek() + "\n\nThis weeks schedule:\n" + getWeek(weekNumber, config));
-                case "--week-n" -> {
-                    int week = Integer.parseInt(args[++i]);
+                }),
+                new MenuAlternative("--tomorrow", "Prints todays day and schedule.", (i) -> {
+                    int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
+                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex+1)%7);
+                    System.out.println("Tomorrows schedule: " + (day == null ? "Off" : day.toString()));
+                }),
+                new MenuAlternative("--yesterday", "Prints todays day and schedule.", (i) -> {
+                    int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
+                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex-1)%7);
+                    System.out.println("Tomorrows schedule: " + (day == null ? "Off" : day.toString()));
+                }),
+                new MenuAlternative("--all", "Prints both the default schedule and the week specific ones.", (i) -> {
+                    System.out.println("Standard schedule:\n" + config.getDefaultWeek() + "\n\nThis weeks schedule:\n" + getWeek(weekNumber, config));
+                }),
+                new MenuAlternative("--week-n", "Prints specified weeks schedule.", (i) -> {
+                    int week = Integer.parseInt(args[i.incrementAndGet()]);
                     System.out.println("Schedule week " + week + ":\n" + getWeek(week, config));
-                }
-                case "--this-week" -> {
+                }),
+                new MenuAlternative("--this-week", "Prints this weeks schedule.", (i) -> {
                     System.out.println("Schedule week " + weekNumber + ":\n" + getWeek(weekNumber, config));
-                }
-            }
+                }),
+                new MenuAlternative("--next-week", "Prints next weeks schedule.", (i) -> {
+                    System.out.println("Schedule week " + (weekNumber + 1) + ":\n" + getWeek(weekNumber + 1, config));
+                }),
+                new MenuAlternative("--last-week", "Prints last weeks schedule.", (i) -> {
+                    System.out.println("Schedule week " + (weekNumber - 1) + ":\n" + getWeek(weekNumber - 1, config));
+                })
+        );
+        for (AtomicInteger i = new AtomicInteger(0); i.get() < args.length; i.incrementAndGet()) {
+            Optional<MenuAlternative> menuItem = menuItems.stream()
+                    .filter(x -> args[i.get()].equalsIgnoreCase(x.getMenuPath()))
+                    .findFirst();
+            if(menuItem.isEmpty())
+                System.out.println(helpMessage(menuItems));
+            else
+                menuItem.get().getLogic().action(i);
         }
 
         if(args.length == 0) {
-            System.out.println(helpMessage());
+            System.out.println(helpMessage(menuItems));
         }
     }
 
     public static WorkWeek getWeek(int weekNumber, Config config) {
         return config.getSpecial().stream()
-                .filter(x -> (weekNumber == x.getValidBetweenWeeks().get(0)) || ((weekNumber >= x.getValidBetweenWeeks().get(0)) && (weekNumber <= x.getValidBetweenWeeks().get(1))))
+                .filter(x -> x.getValidBetweenWeeks().contains(weekNumber) || ((weekNumber >= x.getValidBetweenWeeks().get(0)) && (weekNumber <= x.getValidBetweenWeeks().get(1))))
+                .map(x -> new Tuple<Integer, WorkWeek>(x.getValidBetweenWeeks().get(1) - x.getValidBetweenWeeks().get(0), x))
+                .sorted(Comparator.comparingInt(Tuple::getFirst))
+                .map(Tuple::getSecond)
                 .findFirst()
                 .orElse(config.getDefaultWeek());
     }
 
-    public static String helpMessage() {
+    public static String helpMessage(List<MenuAlternative> menuItems) {
         return """
                 No valid input registered.
                 
-                Available inputs are:
-                --all Prints both the default schedule and the week specific ones.
-                --today Prints todays day and schedule.
-                --week-n x Prints specified weeks schedule.
-                """;
+                Available inputs are:\n""".concat(
+                        menuItems.stream()
+                                .sorted(Comparator.comparing(MenuAlternative::getMenuPath))
+                                .map(x -> x.getMenuPath() + " " + x.getDescription())
+                                .collect(Collectors.joining("\n"))
+        );
     }
 }
