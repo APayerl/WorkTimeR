@@ -1,5 +1,7 @@
 package se.payerl;
 
+import java.util.Objects;
+
 public class MenuAlternative {
     private String menuPath;
     private Logic logic;
@@ -21,5 +23,12 @@ public class MenuAlternative {
 
     public Logic getLogic() {
         return logic;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return Objects.equals(getMenuPath(), ((MenuAlternative) o).getMenuPath());
     }
 }

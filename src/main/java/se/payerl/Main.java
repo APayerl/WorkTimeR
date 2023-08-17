@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Main {
     public static void main(String[] args) throws IOException {
@@ -38,7 +39,7 @@ public class Main {
         Config config = mapper.readValue(worktimerConfig, Config.class);
         int weekNumber = LocalDate.now().get(WeekFields.ISO.weekOfYear());
 
-        List<MenuAlternative> menuItems = List.of(
+        List<MenuAlternative> menuItems = Stream.of(
                 new MenuAlternative("today", "Prints todays day and schedule.", (i) -> {
                     int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
                     WorkDay day = getWeek(weekNumber, config).getDays().get(dayIndex);
@@ -70,7 +71,7 @@ public class Main {
                 new MenuAlternative("last-week", "Prints last weeks schedule.", (i) -> {
                     System.out.println("Schedule week " + (weekNumber - 1) + ":\n" + getWeek(weekNumber - 1, config));
                 })
-        );
+        ).distinct().collect(Collectors.toList());
 
         for(AtomicInteger i = new AtomicInteger(0); i.get() < args.length; i.incrementAndGet()) {
             Optional<MenuAlternative> menuItem = menuItems.stream()
