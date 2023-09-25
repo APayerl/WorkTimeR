@@ -37,39 +37,41 @@ public class Main {
 
 
         Config config = mapper.readValue(worktimerConfig, Config.class);
-        int weekNumber = LocalDate.now().get(WeekFields.ISO.weekOfYear());
+        LocalDate currentDay = LocalDate.now();
 
         List<MenuAlternative> menuItems = Stream.of(
                 new MenuAlternative("today", "Prints todays day and schedule.", (i) -> {
-                    int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
-                    WorkDay day = getWeek(weekNumber, config).getDays().get(dayIndex);
+                    int dayIndex = currentDay.getDayOfWeek().getValue() - 1;
+                    WorkDay day = getWeek(getWeekNumber(currentDay), config).getDays().get(dayIndex);
                     System.out.println("Todays schedule: " + (day == null ? "Off" : day.toString()));
                 }),
                 new MenuAlternative("tomorrow", "Prints todays day and schedule.", (i) -> {
-                    int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
-                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex + 1) % 7);
+                    LocalDate tomorrow = currentDay.plusDays(1);
+                    int dayIndex = tomorrow.getDayOfWeek().getValue() - 1;
+                    WorkDay day = getWeek(getWeekNumber(tomorrow), config).getDays().get((dayIndex + 1) % 7);
                     System.out.println("Tomorrows schedule: " + (day == null ? "Off" : day.toString()));
                 }),
-                new MenuAlternative("yesterday", "Prints todays day and schedule.", (i) -> {
-                    int dayIndex = LocalDate.now().getDayOfWeek().getValue() - 1;
-                    WorkDay day = getWeek(weekNumber, config).getDays().get((dayIndex - 1) % 7);
-                    System.out.println("Tomorrows schedule: " + (day == null ? "Off" : day.toString()));
+                new MenuAlternative("yesterday", "Prints yesterdays schedule.", (i) -> {
+                    LocalDate yesterday = currentDay.minusDays(1);
+                    int dayIndex = yesterday.getDayOfWeek().getValue() - 1;
+                    WorkDay day = getWeek(getWeekNumber(yesterday), config).getDays().get((dayIndex - 1) % 7);
+                    System.out.println("Yesterdays schedule: " + (day == null ? "Off" : day.toString()));
                 }),
                 new MenuAlternative("all", "Prints both the default schedule and the week specific ones.", (i) -> {
-                    System.out.println("Standard schedule:\n" + config.getDefaultWeek() + "\n\nThis weeks schedule:\n" + getWeek(weekNumber, config));
+                    System.out.println("Standard schedule:\n" + config.getDefaultWeek() + "\n\nThis weeks schedule:\n" + getWeek(getWeekNumber(currentDay), config));
                 }),
                 new MenuAlternative("week-n", "Prints specified weeks schedule.", (i) -> {
                     int week = Integer.parseInt(args[i.incrementAndGet()]);
                     System.out.println("Schedule week " + week + ":\n" + getWeek(week, config));
                 }),
                 new MenuAlternative("this-week", "Prints this weeks schedule.", (i) -> {
-                    System.out.println("Schedule week " + weekNumber + ":\n" + getWeek(weekNumber, config));
+                    System.out.println("Schedule week " + getWeekNumber(currentDay) + ":\n" + getWeek(getWeekNumber(currentDay), config));
                 }),
                 new MenuAlternative("next-week", "Prints next weeks schedule.", (i) -> {
-                    System.out.println("Schedule week " + (weekNumber + 1) + ":\n" + getWeek(weekNumber + 1, config));
+                    System.out.println("Schedule week " + (getWeekNumber(currentDay.plusWeeks(1))) + ":\n" + getWeek(getWeekNumber(currentDay.plusWeeks(1)), config));
                 }),
                 new MenuAlternative("last-week", "Prints last weeks schedule.", (i) -> {
-                    System.out.println("Schedule week " + (weekNumber - 1) + ":\n" + getWeek(weekNumber - 1, config));
+                    System.out.println("Schedule week " + getWeekNumber(currentDay.minusWeeks(1)) + ":\n" + getWeek(getWeekNumber(currentDay.minusWeeks(1)), config));
                 })
         ).distinct().collect(Collectors.toList());
 
@@ -86,6 +88,10 @@ public class Main {
         if(args.length == 0) {
             System.out.println(helpMessage(menuItems));
         }
+    }
+
+    public static int getWeekNumber(LocalDate date) {
+        return date.get(WeekFields.ISO.weekOfYear());
     }
 
     public static WorkWeek getWeek(int weekNumber, Config config) {
